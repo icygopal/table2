@@ -2,13 +2,6 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-// Function to measure text width
-const measureTextWidth = (text, fontSize = '13px', fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') => {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  context.font = `${fontSize} ${fontFamily}`;
-  return context.measureText(text).width;
-};
 
 // Table column configuration for logistics dashboard
 const COLUMNS = [
@@ -17,69 +10,177 @@ const COLUMNS = [
     title: 'Driver', 
     minWidth: 300,
     maxWidth: 350,
-    flex: 0
+    flex: 0,
+    sticky: true // Make driver column sticky by default
   },
   { 
     key: 'move1', 
     title: 'Move 1', 
     minWidth: 250,
     maxWidth: 300,
-    flex: 1
+    flex: 1,
+    sticky: false
   },
   { 
     key: 'move2', 
     title: 'Move 2', 
     minWidth: 250,
     maxWidth: 300,
-    flex: 1
+    flex: 1,
+    sticky: false
   },
   { 
     key: 'move3', 
     title: 'Move 3', 
     minWidth: 250,
     maxWidth: 300,
-    flex: 1
+    flex: 1,
+    sticky: false
   },
   { 
     key: 'move4', 
     title: 'Move 4', 
     minWidth: 250,
     maxWidth: 300,
-    flex: 1
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move5', 
+    title: 'Move 5', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move6', 
+    title: 'Move 6', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: true
+  },
+  { 
+    key: 'move7', 
+    title: 'Move 7', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move8', 
+    title: 'Move 8', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move9', 
+    title: 'Move 9', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move10', 
+    title: 'Move 10', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move11', 
+    title: 'Move 11', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move12', 
+    title: 'Move 12', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move13', 
+    title: 'Move 13', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
+  },
+  { 
+    key: 'move14', 
+    title: 'Move 14', 
+    minWidth: 250,
+    maxWidth: 300,
+    flex: 1,
+    sticky: false
   }
 ];
 
 // Virtualization configuration
 const MIN_ROW_HEIGHT = 120; // Minimum row height for virtualization
-const MAX_ROW_HEIGHT = 400; // Maximum row height
-const OVERSCAN_ROWS = 5; // Number of extra rows to render above/below viewport
+const MAX_ROW_HEIGHT = 3000; // Maximum row height - significantly increased for large task lists
+const OVERSCAN_ROWS = 8; // Increased to 8 for better performance with tall rows and smoother scrolling
 const OVERSCAN_COLUMNS = 1; // Number of extra columns to render left/right of viewport
 
-// Simplified row height calculation function
+// Dynamic row height calculation function - truly responsive to content with optimized accuracy
 const calculateRowHeight = (row) => {
   let maxHeight = MIN_ROW_HEIGHT;
-  
+
   // Check driver column - fixed height
   if (row.driver) {
     maxHeight = Math.max(maxHeight, 150); // Consistent driver height
   }
-  
-  // Check all move columns for maximum tasks
-  const moveColumns = ['move1', 'move2', 'move3', 'move4'];
+
+  // Dynamically get all move columns from COLUMNS config, filter out 'driver'
+  const moveColumns = COLUMNS
+    .filter(col => col.key !== 'driver')
+    .map(col => col.key);
+
   moveColumns.forEach(columnKey => {
     const move = row[columnKey];
     if (move && move.tasks) {
-      const baseHeight = 100; // Base padding, header, and margins
-      const taskHeight = 22; // Height per task with spacing
-      const tasks = move.tasks.length || 0;
-      const additionalHeight = 40; // For additional elements (assigned driver, last updated, etc.)
-      
-      const moveHeight = baseHeight + (tasks * taskHeight) + additionalHeight;
+      const headerHeight = 34; // Task ID, size, and action buttons (with margins) - more accurate
+      const metadataHeight = 48; // Assigned date/time, driver, last updated - more accurate
+      const taskHeight = 18; // Height per task (12px font + 4px gap + 2px line spacing) - more accurate
+      const padding = 24; // Total padding (12px top + 12px bottom)
+      const buttonSpacing = 12; // Additional space for buttons and margins - increased for better spacing
+      const taskCount = move.tasks.length || 0;
+
+      // Enhanced calculation for very large task lists with better accuracy
+      let moveHeight = headerHeight + metadataHeight + padding + buttonSpacing;
+
+      // Add height for tasks with improved calculation for large lists
+      if (taskCount > 0) {
+        // For very large task lists, use slightly more spacing to prevent cramping
+        const adjustedTaskHeight = taskCount > 50 ? taskHeight + 2 : taskHeight;
+        moveHeight += (taskCount * adjustedTaskHeight);
+
+        // Add extra spacing for very large task lists to improve readability
+        if (taskCount > 100) {
+          moveHeight += Math.min(50, Math.floor(taskCount / 20) * 5); // Progressive spacing increase
+        }
+      }
+
       maxHeight = Math.max(maxHeight, moveHeight);
     }
   });
   
-  return Math.min(MAX_ROW_HEIGHT, maxHeight);
+  // Apply MAX_ROW_HEIGHT as a safety limit but ensure minimum usability
+  const finalHeight = Math.min(maxHeight, MAX_ROW_HEIGHT);
+  
+  // Ensure we never go below minimum height
+  return Math.max(finalHeight, MIN_ROW_HEIGHT);
 };
 
 // Driver component
@@ -202,7 +303,7 @@ const MoveInfo = React.memo(({ move, isDropZone = false }) => {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-start',
-      overflow: 'hidden',
+      overflow: 'visible', // Allow content to expand naturally
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
         <div>
@@ -276,8 +377,8 @@ const MoveInfo = React.memo(({ move, isDropZone = false }) => {
         flexDirection: 'column', 
         gap: '2px', 
         flex: 1,
-        overflow: 'hidden',
-        maxHeight: 'calc(100% - 80px)' // Reserve space for header and metadata
+        overflow: 'visible', // Allow content to expand naturally
+        // Remove maxHeight constraint to let content determine row height
       }}>
         {move.tasks.map((task, index) => (
           <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
@@ -331,10 +432,47 @@ const generateTableData = (startIndex = 0, count = 30) => {
         { name: 'Return empty to yard', voidOut: true },
         { name: 'Pick up container from yard', voidOut: false },
         { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
         { name: 'Return empty to yard', voidOut: true },
         { name: 'Pick up container from yard', voidOut: false },
         { name: 'Deliver to port', voidOut: false },
-        { name: 'Deliver to port', voidOut: false }
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        { name: 'Return empty to yard', voidOut: true },
+        { name: 'Pick up container from yard', voidOut: false },
+        { name: 'Deliver to port', voidOut: false },
+        
       ]
     },
     {
@@ -401,6 +539,16 @@ const generateTableData = (startIndex = 0, count = 30) => {
       move2: Math.random() > 0.4 ? { ...moves[(moveIndex + 1) % moves.length] } : null,
       move3: Math.random() > 0.5 ? { ...moves[(moveIndex + 2) % moves.length] } : null,
       move4: Math.random() > 0.6 ? { ...moves[(moveIndex + 3) % moves.length] } : null,
+      move5: Math.random() > 0.7 ? { ...moves[(moveIndex + 4) % moves.length] } : null,
+      move6: Math.random() > 0.75 ? { ...moves[(moveIndex + 0) % moves.length] } : null,
+      move7: Math.random() > 0.8 ? { ...moves[(moveIndex + 1) % moves.length] } : null,
+      move8: Math.random() > 0.85 ? { ...moves[(moveIndex + 2) % moves.length] } : null,
+      move9: Math.random() > 0.9 ? { ...moves[(moveIndex + 3) % moves.length] } : null,
+      move10: Math.random() > 0.92 ? { ...moves[(moveIndex + 4) % moves.length] } : null,
+      move11: Math.random() > 0.94 ? { ...moves[(moveIndex + 0) % moves.length] } : null,
+      move12: Math.random() > 0.96 ? { ...moves[(moveIndex + 1) % moves.length] } : null,
+      move13: Math.random() > 0.97 ? { ...moves[(moveIndex + 2) % moves.length] } : null,
+      move14: Math.random() > 0.98 ? { ...moves[(moveIndex + 3) % moves.length] } : null,
     });
   }
   return rows;
@@ -508,104 +656,113 @@ const DraggableMoveCell = React.memo(({ move, rowIndex, columnKey, onMoveAssignm
   );
 });
 
-// Virtualized Table Cell component
-const VirtualizedTableCell = React.memo(({ content, width, isLast, columnKey, columnIndex, rowBackground, rowHeight }) => {
+// Virtualized Grid Cell component
+const VirtualizedGridCell = React.memo(({ content, columnKey, rowBackground, rowHeight, isSticky, stickyLeft }) => {
   return (
-    <td
+    <div
       style={{
-        width,
         height: rowHeight,
         minHeight: rowHeight,
-        maxHeight: rowHeight,
         padding: '0',
-        borderRight: !isLast ? '1px solid #e9ecef' : 'none',
-        verticalAlign: 'top',
+        borderRight: '1px solid #e9ecef',
         borderBottom: '1px solid #e9ecef',
-        overflow: 'hidden', // Prevent content overflow
-        // Make driver column sticky
-        ...(columnKey === 'driver' && {
+        overflow: 'visible', // Allow content to expand naturally
+        display: 'flex',
+        alignItems: 'stretch',
+        // Make column sticky if sticky property is true
+        ...(isSticky && {
           position: 'sticky',
-          left: 0,
+          left: stickyLeft || 0,
           zIndex: 12,
           background: rowBackground || '#ffffff',
           borderRight: '2px solid #dee2e6',
           boxShadow: '2px 0 4px rgba(0,0,0,0.1)',
-          maxWidth: width,
-          minWidth: width,
         }),
       }}
     >
       {content}
-    </td>
+    </div>
   );
 });
 
-VirtualizedTableCell.displayName = 'VirtualizedTableCell';
+VirtualizedGridCell.displayName = 'VirtualizedGridCell';
 
-// Virtualized Table Header component
-const VirtualizedTableHeader = React.memo(({ columnWidths, visibleColumns, horizontalScrollLeft, visibleColumnConfigs }) => (
-  <thead style={{
-    background: '#f8f9fa',
-    borderBottom: '2px solid #dee2e6',
-    fontWeight: '600',
-    fontSize: '14px',
-    color: '#495057',
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    height: '40px',
-  }}>
-    <tr>
+// Virtualized Grid Header component
+const VirtualizedGridHeader = React.memo(({ columnWidths, visibleColumns, horizontalScrollLeft, visibleColumnConfigs, stickyPositions }) => {
+  // Create grid template columns string from columnWidths
+  const gridTemplateColumns = visibleColumns.map(columnIndex => 
+    `${columnWidths[columnIndex]}px`
+  ).join(' ');
+
+  return (
+    <div style={{
+      background: '#f8f9fa',
+      borderBottom: '2px solid #dee2e6',
+      fontWeight: '600',
+      fontSize: '14px',
+      color: '#495057',
+      position: 'sticky',
+      top: 0,
+      zIndex: 10,
+      height: '40px',
+      display: 'grid',
+      gridTemplateColumns,
+    }}>
       {visibleColumns.map((columnIndex) => {
         const column = visibleColumnConfigs[columnIndex];
+        const stickyLeft = stickyPositions[columnIndex] || 0;
         return (
-          <th
+          <div
             key={column.key}
             style={{
-              width: columnWidths[columnIndex],
               padding: '8px 12px',
               borderRight: columnIndex < visibleColumnConfigs.length - 1 ? '1px solid #dee2e6' : 'none',
               textAlign: 'left',
-              verticalAlign: 'middle',
+              display: 'flex',
+              alignItems: 'center',
               minHeight: '20px',
               position: 'relative',
-              // Make driver column sticky
-              ...(column.key === 'driver' && {
+              // Make column sticky if sticky property is true
+              ...(column.sticky && {
                 position: 'sticky',
-                left: 0,
+                left: stickyLeft,
                 zIndex: 15,
                 background: '#f8f9fa',
                 borderRight: '2px solid #dee2e6',
                 boxShadow: '2px 0 4px rgba(0,0,0,0.1)',
-                maxWidth: columnWidths[columnIndex],
-                minWidth: columnWidths[columnIndex],
               }),
             }}
           >
             {column.title}
-          </th>
+          </div>
         );
       })}
-    </tr>
-  </thead>
-));
+    </div>
+  );
+});
 
-VirtualizedTableHeader.displayName = 'VirtualizedTableHeader';
+VirtualizedGridHeader.displayName = 'VirtualizedGridHeader';
 
-// Virtualized Table Row component (non-draggable)
-const VirtualizedTableRow = React.memo(({ 
+// Virtualized Grid Row component (non-draggable)
+const VirtualizedGridRow = React.memo(({ 
   row, 
   index, 
   columnWidths,
   visibleColumns,
   visibleColumnConfigs,
   rowHeight,
-  onMoveAssignment
+  onMoveAssignment,
+  stickyPositions
 }) => {
   const rowBackground = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
   
+  // Create grid template columns string from columnWidths
+  const gridTemplateColumns = visibleColumns.map(columnIndex => 
+    `${columnWidths[columnIndex]}px`
+  ).join(' ');
+  
   return (
-    <tr
+    <div
       style={{
         background: rowBackground,
         height: rowHeight,
@@ -613,13 +770,16 @@ const VirtualizedTableRow = React.memo(({
         maxHeight: rowHeight,
         willChange: 'transform', // Optimize for animations
         contain: 'layout style', // Optimize rendering performance
+        display: 'grid',
+        gridTemplateColumns,
       }}
     >
       {visibleColumns.map((columnIndex, colIndex) => {
         const column = visibleColumnConfigs[columnIndex];
         const cellKey = `${column.key}-${index}`;
+        const stickyLeft = stickyPositions[columnIndex] || 0;
         return (
-          <VirtualizedTableCell
+          <VirtualizedGridCell
             key={cellKey}
             content={
               column.key === 'driver' ? (
@@ -633,16 +793,15 @@ const VirtualizedTableRow = React.memo(({
                 />
               )
             }
-            width={columnWidths[columnIndex]}
-            isLast={colIndex === visibleColumns.length - 1}
             columnKey={column.key}
-            columnIndex={columnIndex}
             rowBackground={rowBackground}
             rowHeight={rowHeight}
+            isSticky={column.sticky}
+            stickyLeft={stickyLeft}
           />
         );
       })}
-    </tr>
+    </div>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function to prevent unnecessary re-renders
@@ -655,7 +814,7 @@ const VirtualizedTableRow = React.memo(({
   );
 });
 
-VirtualizedTableRow.displayName = 'VirtualizedTableRow';
+VirtualizedGridRow.displayName = 'VirtualizedGridRow';
 
 // AutoSizer component for dynamic container sizing
 const AutoSizer = ({ children, onResize }) => {
@@ -695,24 +854,7 @@ const AutoSizer = ({ children, onResize }) => {
   );
 };
 
-// Virtualization hook for calculating visible items
-const useVirtualization = (itemCount, itemSize, containerSize, scrollOffset, overscan = 5) => {
-  return useMemo(() => {
-    if (containerSize === 0) return { startIndex: 0, endIndex: 0, offsetY: 0 };
 
-    const startIndex = Math.max(0, Math.floor(scrollOffset / itemSize) - overscan);
-    const endIndex = Math.min(
-      itemCount - 1,
-      Math.floor((scrollOffset + containerSize) / itemSize) + overscan
-    );
-
-    return {
-      startIndex,
-      endIndex,
-      offsetY: startIndex * itemSize,
-    };
-  }, [itemCount, itemSize, containerSize, scrollOffset, overscan]);
-};
 
 function App() {
   const [rows, setRows] = useState(() => generateTableData(0, 30));
@@ -730,17 +872,6 @@ function App() {
     setTableVersion(prev => prev + 1);
   }, [rows]);
 
-  // Calculate column widths
-  const columnWidths = useMemo(() => {
-    const totalFlexWidth = containerWidth - COLUMNS.reduce((sum, col) => sum + (col.flex === 0 ? col.minWidth : 0), 0);
-    const totalFlex = COLUMNS.reduce((sum, col) => sum + col.flex, 0);
-    
-    return COLUMNS.map(col => {
-      if (col.flex === 0) return col.minWidth;
-      const flexWidth = (totalFlexWidth * col.flex) / totalFlex;
-      return Math.min(Math.max(flexWidth, col.minWidth), col.maxWidth);
-    });
-  }, [containerWidth]);
 
   // Get visible columns based on showDriverColumn flag
   const visibleColumnConfigs = useMemo(() => {
@@ -778,7 +909,7 @@ function App() {
     return cumulative;
   }, [rowHeights]);
 
-  // Custom virtualization for variable heights
+  // Enhanced virtualization for variable heights with optimized performance for tall rows
   const rowVirtualization = useMemo(() => {
     if (!rowHeights || rowHeights.length === 0) {
       return {
@@ -791,44 +922,60 @@ function App() {
 
     const availableHeight = containerHeight - 40; // Subtract header height
     
-    // Find the start index by calculating which row should be visible at the current scroll position
+    // Use cumulative heights for more efficient calculation with tall rows
     let startIndex = 0;
-    let cumulativeHeight = 0;
     
-    for (let i = 0; i < rows.length; i++) {
-      if (cumulativeHeight + rowHeights[i] > verticalScrollTop) {
-        startIndex = Math.max(0, i - OVERSCAN_ROWS);
-        break;
+    // Binary search for start index for better performance with many rows
+    let low = 0;
+    let high = rows.length - 1;
+    
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const cumulativeHeight = cumulativeHeights[mid];
+      
+      if (cumulativeHeight <= verticalScrollTop) {
+        startIndex = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
       }
-      cumulativeHeight += rowHeights[i];
     }
     
-    // Find the end index by calculating how many rows fit in the viewport
+    // Apply overscan with bounds checking
+    startIndex = Math.max(0, startIndex - OVERSCAN_ROWS);
+    
+    // Find the end index with improved calculation for tall rows
     let endIndex = startIndex;
-    let currentHeight = 0;
+    let renderHeight = 0;
+    
+    // Calculate how many rows we need to render including overscan
+    const targetHeight = availableHeight + (OVERSCAN_ROWS * 2 * MIN_ROW_HEIGHT);
     
     for (let i = startIndex; i < rows.length; i++) {
-      currentHeight += rowHeights[i];
-      if (currentHeight > availableHeight + (OVERSCAN_ROWS * MIN_ROW_HEIGHT)) {
+      renderHeight += rowHeights[i];
+      endIndex = i;
+      
+      // Stop when we've rendered enough content plus overscan
+      if (renderHeight > targetHeight) {
+        // Add additional overscan for tall rows
         endIndex = Math.min(rows.length - 1, i + OVERSCAN_ROWS);
         break;
       }
-      endIndex = i;
     }
     
-    // Calculate offset for the start index
-    let offsetY = 0;
-    for (let i = 0; i < startIndex; i++) {
-      offsetY += rowHeights[i];
-    }
+    // Ensure we don't exceed array bounds
+    endIndex = Math.min(endIndex, rows.length - 1);
+    
+    // Calculate offset using cumulative heights for accuracy
+    const offsetY = cumulativeHeights[startIndex] || 0;
     
     return {
       startIndex,
       endIndex,
       offsetY,
-      visibleRows: Array.from({ length: endIndex - startIndex + 1 }, (_, i) => startIndex + i)
+      visibleRows: Array.from({ length: Math.max(0, endIndex - startIndex + 1) }, (_, i) => startIndex + i)
     };
-  }, [rows.length, verticalScrollTop, containerHeight, rowHeights]);
+  }, [rows.length, verticalScrollTop, containerHeight, rowHeights, cumulativeHeights]);
 
   // Column virtualization
   const columnVirtualization = useMemo(() => {
@@ -867,9 +1014,13 @@ function App() {
       }
     }
 
-    // Ensure driver column (index 0) is always included if visible
-    if (showDriverColumn && startIndex > 0) {
-      startIndex = 0;
+    // Ensure all sticky columns are always included if visible
+    const stickyColumnIndices = visibleColumnConfigs
+      .map((col, index) => col.sticky ? index : -1)
+      .filter(index => index !== -1);
+    
+    if (stickyColumnIndices.length > 0 && startIndex > Math.min(...stickyColumnIndices)) {
+      startIndex = Math.min(...stickyColumnIndices);
     }
 
     // Ensure we don't hide columns when scrolling reaches the end
@@ -890,20 +1041,40 @@ function App() {
     };
   }, [totalTableWidth, containerWidth, horizontalScrollLeft, visibleColumnWidths, visibleColumnConfigs, showDriverColumn]);
 
+  // Calculate sticky positions for each column
+  const stickyPositions = useMemo(() => {
+    const positions = {};
+    let currentLeft = 0;
+    
+    visibleColumnConfigs.forEach((col, index) => {
+      if (col.sticky) {
+        positions[index] = currentLeft;
+        currentLeft += visibleColumnWidths[index] || 0;
+      } else {
+        positions[index] = 0;
+      }
+    });
+    
+    return positions;
+  }, [visibleColumnConfigs, visibleColumnWidths]);
+
   // Get visible columns
   const visibleColumns = useMemo(() => {
     const columns = [];
     
-    // Always include the driver column (index 0) if it's visible and not already included
-    if (showDriverColumn) {
-      const driverColumnIndex = 0;
-      const hasDriverColumn = columnVirtualization.startIndex <= driverColumnIndex && 
-                             columnVirtualization.endIndex >= driverColumnIndex;
+    // Always include all sticky columns if they're visible and not already included
+    const stickyColumnIndices = visibleColumnConfigs
+      .map((col, index) => col.sticky ? index : -1)
+      .filter(index => index !== -1);
+    
+    stickyColumnIndices.forEach(stickyIndex => {
+      const hasStickyColumn = columnVirtualization.startIndex <= stickyIndex && 
+                             columnVirtualization.endIndex >= stickyIndex;
       
-      if (!hasDriverColumn) {
-        columns.push(driverColumnIndex);
+      if (!hasStickyColumn) {
+        columns.push(stickyIndex);
       }
-    }
+    });
     
     // Add all columns in the virtualization range
     for (let i = columnVirtualization.startIndex; i <= columnVirtualization.endIndex; i++) {
@@ -922,7 +1093,7 @@ function App() {
     }
     
     return columns.sort((a, b) => a - b);
-  }, [columnVirtualization, horizontalScrollLeft, containerWidth, totalTableWidth, showDriverColumn, visibleColumnConfigs]);
+  }, [columnVirtualization, horizontalScrollLeft, containerWidth, totalTableWidth, visibleColumnConfigs]);
 
   // Get visible rows
   const visibleRows = useMemo(() => {
@@ -1027,17 +1198,7 @@ function App() {
     });
   }, []);
 
-  // Debug: Log virtualization info (reduced frequency)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Virtualization info:', {
-        visibleRows: visibleRows.length,
-        totalRows: rows.length,
-        containerHeight,
-        isLoadingMore
-      });
-    }
-  }, [visibleRows.length, rows.length, containerHeight, isLoadingMore]);
+
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -1101,33 +1262,30 @@ function App() {
                     position: 'relative',
                     minWidth: totalTableWidth, // Ensure minimum width to show all columns
                   }}>
-                    <table
+                    <div
                       style={{
                         width: Math.max(width, totalTableWidth),
-                        borderCollapse: 'collapse',
                         position: 'relative',
-                        tableLayout: 'fixed',
+                        display: 'flex',
+                        flexDirection: 'column',
                       }}
                     >
-                      <VirtualizedTableHeader 
+                      <VirtualizedGridHeader 
                         columnWidths={visibleColumnWidths} 
                         visibleColumns={visibleColumns}
                         horizontalScrollLeft={horizontalScrollLeft}
                         visibleColumnConfigs={visibleColumnConfigs}
+                        stickyPositions={stickyPositions}
                       />
-                      <tbody>
+                      <div>
                         {/* Spacer row for virtualized content above */}
                         {rowVirtualization.startIndex > 0 && (
-                          <tr>
-                            <td 
-                              colSpan={visibleColumnConfigs.length}
-                              style={{ 
-                                height: rowVirtualization.offsetY,
-                                padding: 0,
-                                border: 'none',
-                              }}
-                            />
-                          </tr>
+                          <div
+                            style={{ 
+                              height: rowVirtualization.offsetY,
+                              padding: 0,
+                            }}
+                          />
                         )}
                         
                         {/* Visible rows */}
@@ -1136,7 +1294,7 @@ function App() {
                           // Create a stable, simple key without expensive JSON serialization
                           const rowKey = `row-${row.id}-${rowIndex}-v${tableVersion}`;
                           return (
-                            <VirtualizedTableRow
+                            <VirtualizedGridRow
                               key={rowKey}
                               row={row}
                               index={rowIndex}
@@ -1145,45 +1303,42 @@ function App() {
                               visibleColumnConfigs={visibleColumnConfigs}
                               rowHeight={rowHeights[rowIndex]}
                               onMoveAssignment={handleMoveAssignment}
+                              stickyPositions={stickyPositions}
                             />
                           );
                         })}
                         
                         {/* Loading indicator */}
                         {isLoadingMore && (
-                          <tr>
-                            <td 
-                              colSpan={visibleColumnConfigs.length}
-                              style={{ 
-                                height: '60px',
-                                padding: '20px',
-                                textAlign: 'center',
-                                background: '#f8f9fa',
-                                border: 'none',
-                              }}
-                            >
-                              <div style={{ fontSize: '14px', color: '#6c757d' }}>
-                                Loading more data...
-                              </div>
-                            </td>
-                          </tr>
+                          <div
+                            style={{ 
+                              height: '60px',
+                              padding: '20px',
+                              textAlign: 'center',
+                              background: '#f8f9fa',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                            }}
+                          >
+                            <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                              Loading more data...
+                            </div>
+                          </div>
                         )}
                         
                         {/* Spacer row for virtualized content below */}
                         {rowVirtualization.endIndex < rows.length - 1 && (
-                          <tr>
-                            <td 
-                              colSpan={visibleColumnConfigs.length}
-                              style={{ 
-                                height: cumulativeHeights[rows.length] - cumulativeHeights[rowVirtualization.endIndex + 1],
-                                padding: 0,
-                                border: 'none',
-                              }}
-                            />
-                          </tr>
+                          <div
+                            style={{ 
+                              height: cumulativeHeights[rows.length] - cumulativeHeights[rowVirtualization.endIndex + 1],
+                              padding: 0,
+                            }}
+                          />
                         )}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
